@@ -1,3 +1,7 @@
+import numpy as np
+import copy
+
+
 def minDistance(str1, str2, insert_cost=1, delete_cost=1, replace_cost=1):
     '''
     最小编辑距离，可以修改操作代价
@@ -13,13 +17,16 @@ def minDistance(str1, str2, insert_cost=1, delete_cost=1, replace_cost=1):
 
     # 定义表
     dp = [[0 for _ in range(n + 1)] for _ in range(m + 1)]
-    bt = [[0 for _ in range(n + 1)] for _ in range(m + 1)]  # 回退路径，0表示插入，1表示删除，2表示替换或匹配
+    bt = [[0 for _ in range(n + 1)] for _ in range(m + 1)]  # 回退路径，2表示插入，3表示删除，1表示替换或匹配
 
     # 初始化
     for i in range(n + 1):
-        dp[0][i] = i
+        dp[0][i] = i * insert_cost
+        bt[0][i] = 2
     for j in range(m + 1):
-        dp[j][0] = j
+        dp[j][0] = j * delete_cost
+        bt[j][0] = 3
+    bt[0][0] = 0
 
     # 状态转移
     for i in range(1, m + 1):
@@ -34,48 +41,74 @@ def minDistance(str1, str2, insert_cost=1, delete_cost=1, replace_cost=1):
             dp[i][j] = min(replace, min(insert, delete))
 
             # 回溯使用
-            if dp[i][j] == replace and dp[i][j] == delete and dp[i][j] == insert:
-                bt[i][j] = 7
-            elif dp[i][j] == insert and dp[i][j] == delete and dp[i][j] != replace:
-                bt[i][j] = 6
-            elif dp[i][j] == insert and dp[i][j] != delete and dp[i][j] == replace:
-                bt[i][j] = 5
-            elif dp[i][j] != insert and dp[i][j] == delete and dp[i][j] == replace:
-                bt[i][j] = 4
-            elif dp[i][j] != insert and dp[i][j] != delete and dp[i][j] == replace:
-                bt[i][j] = 3
-            elif dp[i][j] != insert and dp[i][j] == delete and dp[i][j] != replace:
+            if dp[i][j] == replace:
+                bt[i][j] = 1
+            elif dp[i][j] == insert:
                 bt[i][j] = 2
             else:
-                bt[i][j] = 1
+                bt[i][j] = 3
+    print("状态转移矩阵为：")
+    for k in range(m + 1):
+        print(str(dp[k]) + "\t")
     return dp[m][n], bt
 
 
-if __name__ == '__main__':
-    # str1 = 'cafe'
-    # str2 = 'coffee'
-    # distance, backtrace = minDistance(str1, str2)
-    # print("{}和{}的编辑距离为{}".format(str1, str2, distance))
-    # for i in range(len(backtrace)):
-    #     print(str(backtrace[i]) + "\t")
-    #
-    # str1 = 'intention'
-    # str2 = 'execution'
-    # distance, backtrace = minDistance(str1, str2)
-    # print("{}和{}的编辑距离为{}".format(str1, str2, distance))
-    # for i in range(len(backtrace)):
-    #     print(str(backtrace[i]) + "\t")
-    #
-    # str1 = 'intention'
-    # str2 = 'execution'
-    # distance, backtrace = minDistance(str1, str2, replace_cost=2)
-    # print("替换代价为2时，{}和{}的编辑距离为{}".format(str1, str2, distance))
-    # for i in range(len(backtrace)):
-    #     print(str(backtrace[i]) + "\t")
-    str1 = 'cafe'
-    str2 = 'coffee'
-    distance, backtrace = minDistance(str1, str2, replace_cost=2)
-    print("删除和修改代价为2时，{}和{}的编辑距离为{}".format(str1, str2, distance))
-    for i in range(len(backtrace)):
-        print(str(backtrace[i]) + "\t")
+def back_trace(bt):
+    (m, n) = np.array(bt).shape
+    retain = []
+    while True:
+        retain.append(bt[m - 1][n - 1])
+        if bt[m - 1][n - 1] == 1:
+            m -= 1
+            n -= 1
+        elif bt[m - 1][n - 1] == 2:
+            n -= 1
+        else:
+            m -= 1
+        if bt[m - 1][n - 1] == 0:
+            break
+    return list(reversed(retain))
 
+
+def transform(retain, str1, str2):
+    k = len(retain)
+    str3 = copy.deepcopy(str1) + ' ' * len(str2)
+    i = j = 0
+    for iter in range(k):
+        if retain[iter] == 1:
+            if str3[i] == str2[j]:
+                i += 1
+                j += 1
+            else:
+                l = copy.deepcopy(str3)
+                str3 = str3[0:i] + str2[j] + str3[i + 1:]
+                print("将{}改为{}".format(l, str3))
+                i += 1
+                j += 1
+        elif retain[iter] == 2:
+            l = copy.deepcopy(str3)
+            str3 = str3[0:i] + str2[j] + str3[i:]
+            print("将{}改为{}".format(l, str3))
+            i += 1
+            j += 1
+        else:
+            l = copy.deepcopy(str3)
+            str3 = str3[0:i] + str3[i + 1:]
+            print("将{}改为{}".format(l, str3))
+
+
+if __name__ == '__main__':
+    str1 = input("请输入字符串1:")
+    str2 = input("请输入字符串2:")
+    insert_num = int(input("请输入增加代价:"))
+    delete_num = int(input("请输入删除代价:"))
+    replace_num = int(input("请输入更改代价:"))
+
+    distance, backtrace = minDistance(str1, str2, insert_num, delete_num, replace_num)
+    print("{}和{}的编辑距离为{}".format(str1, str2, distance))
+    retain = back_trace(backtrace)
+
+    print("修改步骤为：")
+    transform(retain, str1, str2)
+
+    input("输入任意字母后回车退出")
